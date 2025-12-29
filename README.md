@@ -73,12 +73,19 @@ sequenceDiagram
 ###  Real-Time Collaboration
 ```mermaid
 flowchart TD
-    U1[User A] --> WS[WebSocket Server]
-    U2[User B] --> WS
-    WS --> CHAT[Shared Chat]
-    CHAT --> AI[Shared Context]
-    AI --> CHAT
-    CHAT --> DB[(Messages)]
+    A[ Code Tree] --> B{Click Node}
+    B --> C[Branch]
+    B --> D[File]
+    B --> E[Function]
+    C --> F[ Open Chat Room]
+    D --> F
+    E --> F
+    F --> G[ Real-time Chat]
+    F --> H[ AI Assistance]
+    G --> I[ Team Collaboration]
+    H --> J[Code-aware Responses]
+    I --> F
+    J --> F
 ```
 
 ###  Memory Lifecycle
