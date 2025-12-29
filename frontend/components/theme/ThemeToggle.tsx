@@ -6,7 +6,7 @@ import { useTheme } from "next-themes"
 import { Button } from "@/components/ui/button"
 
 export function ThemeToggle() {
-  const { theme, setTheme } = useTheme()
+  const { theme, setTheme, resolvedTheme } = useTheme()
   const [mounted, setMounted] = React.useState(false)
 
   // useEffect only runs on the client, so now we can safely show the UI
@@ -22,14 +22,20 @@ export function ThemeToggle() {
     )
   }
 
+  // Use resolvedTheme to get the actual theme (handles "system" theme)
+  const currentTheme = resolvedTheme || theme
+  const isDark = currentTheme === "dark"
+
   return (
     <Button
       variant="outline"
       size="sm"
       className="w-full"
-      onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
+      onClick={() => {
+        setTheme(isDark ? "light" : "dark")
+      }}
     >
-      {theme === "dark" ? (
+      {isDark ? (
         <>
           <Sun className="mr-2 h-4 w-4" />
           Light Mode
@@ -43,4 +49,5 @@ export function ThemeToggle() {
     </Button>
   )
 }
+
 

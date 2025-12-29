@@ -57,6 +57,34 @@
   }
 }
 
+/* Smooth theme transitions */
+:root {
+  color-scheme: light dark;
+}
+
+html {
+  color-scheme: light dark;
+}
+
+/* Apply transitions to all elements when theme-transitioning class is present */
+html.theme-transitioning,
+html.theme-transitioning *,
+html.theme-transitioning *::before,
+html.theme-transitioning *::after {
+  transition-property: background-color, border-color, color, fill, stroke, opacity, box-shadow, outline-color;
+  transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+  transition-duration: 800ms;
+}
+
+/* Always apply transitions, but make them faster for non-theme changes */
+*,
+*::before,
+*::after {
+  transition-property: background-color, border-color, color, fill, stroke, opacity, box-shadow, outline-color;
+  transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+  transition-duration: 150ms;
+}
+
 /* Custom scrollbar for chat area */
 @layer utilities {
   .overflow-y-auto::-webkit-scrollbar {

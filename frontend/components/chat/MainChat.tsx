@@ -1,24 +1,24 @@
 "use client"
 
 import { useEffect, useState, useRef } from "react"
-import { ScrollArea } from "@/components/ui/scroll-area"
 import { Textarea } from "@/components/ui/textarea"
 import { Button } from "@/components/ui/button"
 import { chatApi, type ChatMessage } from "@/lib/api"
-import { Loader2, Send, User, Bot } from "lucide-react"
-import { format } from "date-fns"
+import { Loader2 } from "lucide-react"
 
 interface MainChatProps {
   repositoryId: number
   repositoryName: string
   showWelcome?: boolean
+  sidebarOpen?: boolean
 }
 
-export default function MainChat({ repositoryId, repositoryName, showWelcome = false }: MainChatProps) {
+export default function MainChat({ repositoryId, repositoryName, showWelcome = false, sidebarOpen = false }: MainChatProps) {
   const [messages, setMessages] = useState<ChatMessage[]>([])
   const [input, setInput] = useState("")
   const [loading, setLoading] = useState(false)
   const [sending, setSending] = useState(false)
+  const [typingMessages, setTypingMessages] = useState<Map<number, string>>(new Map())
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
 
@@ -61,6 +61,10 @@ export default function MainChat({ repositoryId, repositoryName, showWelcome = f
 
     const userMessage = input.trim()
     setInput("")
+    
+    // Add delay before sending
+    await new Promise(resolve => setTimeout(resolve, 300))
+    
     setSending(true)
 
     // If no repository selected, show a message
@@ -108,11 +112,23 @@ export default function MainChat({ repositoryId, repositoryName, showWelcome = f
 
     try {
       const response = await chatApi.send(repositoryId, { content: userMessage })
-      // Replace temp message and add response
+      // Replace temp message and add response with empty content initially
+      const responseWithEmptyContent = { ...response, content: "" }
       setMessages((prev) => {
         const filtered = prev.filter((m) => m.id !== tempUserMessage.id)
-        return [...filtered, response]
+        return [...filtered, responseWithEmptyContent]
       })
+      
+      // Typewriter effect for assistant messages
+      if (response.role === "assistant") {
+        typewriterEffect(response.id, response.content)
+      } else {
+        setMessages((prev) => {
+          return prev.map((m) =>
+            m.id === response.id ? response : m
+          )
+        })
+      }
     } catch (error) {
       console.error("Failed to send message:", error)
       // Remove temp message on error
@@ -137,13 +153,52 @@ export default function MainChat({ repositoryId, repositoryName, showWelcome = f
     e.target.style.height = `${Math.min(e.target.scrollHeight, 200)}px`
   }
 
+  const typewriterEffect = (messageId: number, fullText: string) => {
+    let currentIndex = 0
+    const typingSpeed = 20 // milliseconds per character
+    
+    const typeInterval = setInterval(() => {
+      if (currentIndex <= fullText.length) {
+        const displayedText = fullText.slice(0, currentIndex)
+        setTypingMessages((prev) => {
+          const newMap = new Map(prev)
+          newMap.set(messageId, displayedText)
+          return newMap
+        })
+        
+        setMessages((prev) => {
+          return prev.map((m) =>
+            m.id === messageId ? { ...m, content: displayedText } : m
+          )
+        })
+        
+        currentIndex++
+        scrollToBottom()
+      } else {
+        clearInterval(typeInterval)
+        setTypingMessages((prev) => {
+          const newMap = new Map(prev)
+          newMap.delete(messageId)
+          return newMap
+        })
+      }
+    }, typingSpeed)
+  }
+
   return (
     <div className="flex flex-col h-full relative">
      
 
-      {/* Messages Area - Scrollable */}
-      <div className="flex-1 overflow-y-auto">
-        <div className="max-w-3xl mx-auto px-4 py-8">
+      {/* Messages Area - Scrollable, adjusts for sidebar */}
+      <div className="flex-1 overflow-y-auto pb-32">
+        <div 
+          className="mx-auto px-4 py-8 transition-all"
+          style={{
+            maxWidth: sidebarOpen ? 'calc(100vw - clamp(320px, 38vw, 480px) - 4rem)' : '48rem',
+            transitionDuration: '650ms',
+            transitionTimingFunction: 'cubic-bezier(0.25, 0.46, 0.45, 0.94)'
+          }}
+        >
           {loading ? (
             <div className="flex justify-center items-center py-12">
               <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
@@ -184,20 +239,11 @@ export default function MainChat({ repositoryId, repositoryName, showWelcome = f
               {messages.map((message) => (
                 <div
                   key={message.id}
-                  className={`flex gap-4 ${
+                  className={`flex ${
                     message.role === "user" ? "justify-end" : "justify-start"
                   }`}
                 >
-                  {message.role === "assistant" && (
-                    <div className="flex-shrink-0 w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center">
-                      <Bot className="h-4 w-4 text-primary" />
-                    </div>
-                  )}
-                  <div
-                    className={`max-w-[85%] ${
-                      message.role === "user" ? "order-2" : ""
-                    }`}
-                  >
+                  <div className="max-w-[85%]">
                     <div
                       className={`rounded-lg border px-4 py-3 ${
                         message.role === "user"
@@ -206,7 +252,10 @@ export default function MainChat({ repositoryId, repositoryName, showWelcome = f
                       }`}
                     >
                       <p className="text-sm whitespace-pre-wrap leading-relaxed">
-                        {message.content}
+                        {typingMessages.get(message.id) ?? message.content}
+                        {typingMessages.has(message.id) && (
+                          <span className="animate-pulse">|</span>
+                        )}
                       </p>
                     </div>
                     <p
@@ -216,21 +265,12 @@ export default function MainChat({ repositoryId, repositoryName, showWelcome = f
                           : "text-muted-foreground"
                       }`}
                     >
-                      {format(new Date(message.created_at), "MMM d, HH:mm")}
                     </p>
                   </div>
-                  {message.role === "user" && (
-                    <div className="flex-shrink-0 w-8 h-8 rounded-full bg-secondary flex items-center justify-center order-1">
-                      <User className="h-4 w-4" />
-                    </div>
-                  )}
                 </div>
               ))}
               {sending && (
-                <div className="flex gap-4 justify-start">
-                  <div className="flex-shrink-0 w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center">
-                    <Bot className="h-4 w-4 text-primary" />
-                  </div>
+                <div className="flex justify-start">
                   <div className="bg-muted border border-border rounded-lg px-4 py-3">
                     <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
                   </div>
@@ -242,36 +282,59 @@ export default function MainChat({ repositoryId, repositoryName, showWelcome = f
         </div>
       </div>
 
-      {/* Input Area - Fixed at Bottom */}
-      <div className="absolute bottom-0 left-0 right-0 border-t bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-        <div className="max-w-5xl mx-auto h-full px-4 py-3">
-          <div className="relative">
-            <div className="flex items-end gap-2 bg-background rounded-lg border shadow-lg">
-              <Textarea
-                ref={textareaRef}
-                placeholder="Message Polonium..."
-                value={input}
-                onChange={handleTextareaChange}
-                onKeyPress={handleKeyPress}
-                disabled={sending}
-                rows={1}
-                className="resize-none min-h-[52px] max-h-[200px] pr-14 py-3.5 px-4 border-0 focus-visible:ring-0 focus-visible:ring-offset-0"
-              />
-              <Button
-                onClick={handleSend}
-                disabled={sending || !input.trim()}
-                size="icon"
-                className="absolute right-2 bottom-2 h-8 w-8 rounded-lg disabled:opacity-50"
-              >
-                {sending ? (
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                ) : (
-                  <Send className="h-4 w-4" />
-                )}
-              </Button>
-            </div>
-          </div>
-        </div>
+      {/* Input Area - Fixed at Bottom, adjusts for sidebar */}
+      <div 
+        className="absolute bottom-5 px-4 py-3 relative flex items-end gap-2 bg-background rounded-3xl border shadow-lg transition-all"
+        style={{
+          left: sidebarOpen ? '1rem' : '50%',
+          transform: sidebarOpen ? 'translateX(0)' : 'translateX(-50%)',
+          width: sidebarOpen ? 'calc(100% - 2rem)' : 'min(100vw - 2rem, 80rem)',
+          maxWidth: sidebarOpen ? 'none' : '80rem',
+          transitionDuration: '650ms',
+          transitionTimingFunction: 'cubic-bezier(0.25, 0.46, 0.45, 0.94)'
+        }}
+      >
+        <Textarea
+          ref={textareaRef}
+          placeholder="Ask me to create a workspace for you..."
+          value={input}
+          onChange={handleTextareaChange}
+          onKeyPress={handleKeyPress}
+          disabled={sending}
+          rows={1}
+          className="resize-none flex-1 min-h-[180px] max-h-[200px] pr-14 py-3.5 px-4 border-0 focus-visible:ring-0 focus-visible:ring-offset-0"
+        />
+        <Button
+          onClick={handleSend}
+          disabled={sending || !input.trim()}
+          size="icon"
+          className="absolute right-6 bottom-6 h-12 w-12 rounded-lg-full disabled:opacity-50"
+        >
+          {sending ? (
+            <Loader2 className="h-4 w-4 animate-spin" />
+          ) : (
+            <svg 
+              width="16" 
+              height="16" 
+              viewBox="0 0 24 24" 
+              fill="none" 
+              xmlns="http://www.w3.org/2000/svg"
+              className="h-4 w-4"
+            >
+              <g clipPath="url(#clip0_403_3214)">
+                <path 
+                  d="M6.99985 24C6.86824 24.0008 6.73778 23.9756 6.61594 23.9258C6.4941 23.876 6.38329 23.8027 6.28985 23.71C6.19612 23.6171 6.12172 23.5065 6.07096 23.3846C6.02019 23.2628 5.99405 23.132 5.99405 23C5.99405 22.868 6.02019 22.7373 6.07096 22.6155C6.12172 22.4936 6.19612 22.383 6.28985 22.29L14.4598 14.12C15.0216 13.5575 15.3372 12.7951 15.3372 12C15.3372 11.205 15.0216 10.4426 14.4598 9.88005L6.28985 1.71006C6.10154 1.52176 5.99576 1.26636 5.99576 1.00006C5.99576 0.733761 6.10154 0.478366 6.28985 0.290063C6.47815 0.101759 6.73355 -0.00402832 6.99985 -0.00402832C7.26615 -0.00402832 7.52154 0.101759 7.70985 0.290063L15.8798 8.46005C16.3455 8.92451 16.7149 9.47626 16.967 10.0837C17.219 10.6912 17.3488 11.3424 17.3488 12C17.3488 12.6577 17.219 13.3089 16.967 13.9164C16.7149 14.5238 16.3455 15.0756 15.8798 15.54L7.70985 23.71C7.61641 23.8027 7.50559 23.876 7.38375 23.9258C7.26192 23.9756 7.13145 24.0008 6.99985 24Z" 
+                  fill="currentColor"
+                />
+              </g>
+              <defs>
+                <clipPath id="clip0_403_3214">
+                  <rect width="24" height="24" fill="white"/>
+                </clipPath>
+              </defs>
+            </svg>
+          )}
+        </Button>
       </div>
     </div>
   )
