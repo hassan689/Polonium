@@ -1,6 +1,4 @@
-
-<img width="1899" height="838" alt="Screenshot (181)" src="https://github.com/user-attachments/assets/d6461136-4cab-44fe-8c38-26bb08d10bfb" />
-
+<img width="1893" height="910" alt="Screenshot (198)" src="https://github.com/user-attachments/assets/5c70173e-141b-4387-be47-9cef69b3ecd6" />
 
 # Polonium
 
