@@ -1,3 +1,7 @@
+
+<img width="1899" height="838" alt="Screenshot (181)" src="https://github.com/user-attachments/assets/d6461136-4cab-44fe-8c38-26bb08d10bfb" />
+
+
 # Polonium
 
 An open-source, AI-powered collaborative workspace for developers to understand, discuss, and contribute to GitHub repositories.
