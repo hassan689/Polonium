@@ -42,3 +42,7 @@ class ChatMessage(Base):
     def __repr__(self) -> str:
         return f"<ChatMessage {self.id} in repo {self.repository_id}>"
 
+
+
+
+

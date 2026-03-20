@@ -203,3 +203,9 @@ curl -X POST "http://localhost:8000/api/v1/repositories/1/chat" \
 - Monitor database with `psql` or pgAdmin
 - Check Qdrant dashboard at http://localhost:6333/dashboard
 
+
+
+
+
+
+

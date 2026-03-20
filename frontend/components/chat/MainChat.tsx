@@ -29,6 +29,7 @@ export default function MainChat({ repositoryId, repositoryName, showWelcome = f
       setMessages([])
       setLoading(false)
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [repositoryId])
 
   useEffect(() => {
@@ -41,16 +42,25 @@ export default function MainChat({ repositoryId, repositoryName, showWelcome = f
   }, [repositoryId])
 
   const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" })
+    try {
+      messagesEndRef.current?.scrollIntoView({ behavior: "smooth" })
+    } catch (error) {
+      // Silently handle scroll errors
+      if (messagesEndRef.current) {
+        messagesEndRef.current.scrollIntoView()
+      }
+    }
   }
 
   const loadMessages = async () => {
     try {
       setLoading(true)
       const data = await chatApi.list(repositoryId)
-      setMessages(data)
-    } catch (error) {
+      setMessages(data || [])
+    } catch (error: any) {
+      // Silently handle errors - don't crash UI if API is not available
       console.error("Failed to load messages:", error)
+      setMessages([])
     } finally {
       setLoading(false)
     }
@@ -121,7 +131,7 @@ export default function MainChat({ repositoryId, repositoryName, showWelcome = f
       
       // Typewriter effect for assistant messages
       if (response.role === "assistant") {
-        typewriterEffect(response.id, response.content)
+        typewriterEffect(response.id, response.content || "")
       } else {
         setMessages((prev) => {
           return prev.map((m) =>
@@ -129,10 +139,22 @@ export default function MainChat({ repositoryId, repositoryName, showWelcome = f
           )
         })
       }
-    } catch (error) {
+    } catch (error: any) {
+      // Silently handle errors - show user-friendly message instead of crashing
       console.error("Failed to send message:", error)
-      // Remove temp message on error
-      setMessages((prev) => prev.filter((m) => m.id !== tempUserMessage.id))
+      // Remove temp message on error and show error message
+      setMessages((prev) => {
+        const filtered = prev.filter((m) => m.id !== tempUserMessage.id)
+        const errorMessage: ChatMessage = {
+          id: Date.now() + 1,
+          repository_id: repositoryId,
+          user_id: null,
+          role: "assistant",
+          content: "Sorry, I'm having trouble connecting to the server. Please check if the backend is running and try again.",
+          created_at: new Date().toISOString(),
+        }
+        return [...filtered, errorMessage]
+      })
     } finally {
       setSending(false)
       textareaRef.current?.focus()
@@ -154,6 +176,16 @@ export default function MainChat({ repositoryId, repositoryName, showWelcome = f
   }
 
   const typewriterEffect = (messageId: number, fullText: string) => {
+    if (!fullText || fullText.length === 0) {
+      // If no text, just remove from typing messages
+      setTypingMessages((prev) => {
+        const newMap = new Map(prev)
+        newMap.delete(messageId)
+        return newMap
+      })
+      return
+    }
+
     let currentIndex = 0
     const typingSpeed = 20 // milliseconds per character
     
@@ -190,52 +222,67 @@ export default function MainChat({ repositoryId, repositoryName, showWelcome = f
      
 
       {/* Messages Area - Scrollable, adjusts for sidebar */}
-      <div className="flex-1 overflow-y-auto pb-32">
+      <div className="flex-1 overflow-y-auto pb-40">
         <div 
-          className="mx-auto px-4 py-8 transition-all"
+          className="mx-auto px-4 md:px-6 py-8 md:py-12 transition-all"
           style={{
-            maxWidth: sidebarOpen ? 'calc(100vw - clamp(320px, 38vw, 480px) - 4rem)' : '48rem',
+            maxWidth: sidebarOpen ? 'calc(100vw - clamp(320px, 38vw, 480px) - 4rem)' : '56rem',
             transitionDuration: '650ms',
             transitionTimingFunction: 'cubic-bezier(0.25, 0.46, 0.45, 0.94)'
           }}
         >
           {loading ? (
-            <div className="flex justify-center items-center py-12">
-              <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+            <div className="flex justify-center items-center min-h-[60vh]">
+              <div className="flex flex-col items-center gap-4">
+                <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+                <p className="text-sm text-muted-foreground">Loading messages...</p>
+              </div>
             </div>
           ) : messages.length === 0 ? (
-            <div className="text-center py-12">
-              {repositoryId > 0 && (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-3 max-w-lg mx-auto">
-                  <button
-                    onClick={() => setInput("What is the main purpose of this repository?")}
-                    className="p-3 text-left rounded-lg border hover:bg-accent transition-colors text-sm"
-                  >
-                    What is the main purpose of this repository?
-                  </button>
-                  <button
-                    onClick={() => setInput("Explain the architecture of this codebase")}
-                    className="p-3 text-left rounded-lg border hover:bg-accent transition-colors text-sm"
-                  >
-                    Explain the architecture of this codebase
-                  </button>
-                  <button
-                    onClick={() => setInput("What are the key technologies used?")}
-                    className="p-3 text-left rounded-lg border hover:bg-accent transition-colors text-sm"
-                  >
-                    What are the key technologies used?
-                  </button>
-                  <button
-                    onClick={() => setInput("How do I get started with this project?")}
-                    className="p-3 text-left rounded-lg border hover:bg-accent transition-colors text-sm"
-                  >
-                    How do I get started with this project?
-                  </button>
+            <div className="flex flex-col items-center justify-center min-h-[80vh] px-4">
+              <div className="max-w-2xl w-full text-center space-y-8">
+                <div className="space-y-4">
+                  <h1 className="text-5xl md:text-6xl font-light text-foreground tracking-tight">
+                    {repositoryId > 0 ? (
+                      <>Collaborate on <span className="font-medium">{repositoryName}</span></>
+                    ) : (
+                      <>Meet Polonium</>
+                    )}
+                  </h1>
                 </div>
-              )}
+                
+                {repositoryId > 0 && (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3 max-w-2xl mx-auto pt-8">
+                    <button
+                      onClick={() => setInput("@issue I found a bug in the authentication flow")}
+                      className="p-4 text-left rounded-xl border border-border/50 bg-card/50 hover:bg-accent/50 hover:border-accent transition-all duration-200 text-sm backdrop-blur-sm"
+                    >
+                      @issue I found a bug in the authentication flow
+                    </button>
+                    <button
+                      onClick={() => setInput("Can someone review this pull request? @team")}
+                      className="p-4 text-left rounded-xl border border-border/50 bg-card/50 hover:bg-accent/50 hover:border-accent transition-all duration-200 text-sm backdrop-blur-sm"
+                    >
+                      Can someone review this pull request? @team
+                    </button>
+                    <button
+                      onClick={() => setInput("Explain the architecture of this codebase")}
+                      className="p-4 text-left rounded-xl border border-border/50 bg-card/50 hover:bg-accent/50 hover:border-accent transition-all duration-200 text-sm backdrop-blur-sm"
+                    >
+                      Explain the architecture of this codebase
+                    </button>
+                    <button
+                      onClick={() => setInput("@discussion What's the best approach for handling API rate limits?")}
+                      className="p-4 text-left rounded-xl border border-border/50 bg-card/50 hover:bg-accent/50 hover:border-accent transition-all duration-200 text-sm backdrop-blur-sm"
+                    >
+                      @discussion What's the best approach for handling API rate limits?
+                    </button>
+                  </div>
+                )}
+              </div>
             </div>
           ) : (
-            <div className="space-y-6 pb-24">
+            <div className="space-y-8 pb-24">
               {messages.map((message) => (
                 <div
                   key={message.id}
@@ -243,18 +290,18 @@ export default function MainChat({ repositoryId, repositoryName, showWelcome = f
                     message.role === "user" ? "justify-end" : "justify-start"
                   }`}
                 >
-                  <div className="max-w-[85%]">
+                  <div className="max-w-[85%] md:max-w-[75%]">
                     <div
-                      className={`rounded-lg border px-4 py-3 ${
+                      className={`rounded-2xl px-5 py-4 shadow-sm ${
                         message.role === "user"
-                          ? "bg-primary text-primary-foreground border-primary/20"
-                          : "bg-muted border-border"
+                          ? "bg-primary text-primary-foreground ml-auto"
+                          : "bg-card border border-border/50"
                       }`}
                     >
-                      <p className="text-sm whitespace-pre-wrap leading-relaxed">
+                      <p className="text-[15px] leading-relaxed whitespace-pre-wrap">
                         {typingMessages.get(message.id) ?? message.content}
                         {typingMessages.has(message.id) && (
-                          <span className="animate-pulse">|</span>
+                          <span className="animate-pulse ml-1">|</span>
                         )}
                       </p>
                     </div>
@@ -271,8 +318,11 @@ export default function MainChat({ repositoryId, repositoryName, showWelcome = f
               ))}
               {sending && (
                 <div className="flex justify-start">
-                  <div className="bg-muted border border-border rounded-lg px-4 py-3">
-                    <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+                  <div className="bg-card border border-border/50 rounded-2xl px-5 py-4 shadow-sm">
+                    <div className="flex items-center gap-2">
+                      <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+                      <span className="text-sm text-muted-foreground">Thinking...</span>
+                    </div>
                   </div>
                 </div>
               )}
@@ -284,31 +334,31 @@ export default function MainChat({ repositoryId, repositoryName, showWelcome = f
 
       {/* Input Area - Fixed at Bottom, adjusts for sidebar */}
       <div 
-        className="absolute bottom-5 px-4 py-3 relative flex items-end gap-2 bg-background rounded-3xl border shadow-lg transition-all"
+        className="absolute bottom-6 px-6 py-4 relative flex items-end gap-3 bg-card/80 backdrop-blur-xl rounded-2xl border border-border/50 shadow-2xl transition-all"
         style={{
-          left: sidebarOpen ? '1rem' : '50%',
+          left: sidebarOpen ? '1.5rem' : '50%',
           transform: sidebarOpen ? 'translateX(0)' : 'translateX(-50%)',
-          width: sidebarOpen ? 'calc(100% - 2rem)' : 'min(100vw - 2rem, 80rem)',
-          maxWidth: sidebarOpen ? 'none' : '80rem',
+          width: sidebarOpen ? 'calc(100% - 3rem)' : 'min(100vw - 3rem, 56rem)',
+          maxWidth: sidebarOpen ? 'none' : '56rem',
           transitionDuration: '650ms',
           transitionTimingFunction: 'cubic-bezier(0.25, 0.46, 0.45, 0.94)'
         }}
       >
         <Textarea
           ref={textareaRef}
-          placeholder="Ask me to create a workspace for you..."
+          placeholder={repositoryId > 0 ? "Mention issues, ask questions, or discuss code with your team..." : "Ask me to create a workspace for you..."}
           value={input}
           onChange={handleTextareaChange}
           onKeyPress={handleKeyPress}
           disabled={sending}
           rows={1}
-          className="resize-none flex-1 min-h-[180px] max-h-[200px] pr-14 py-3.5 px-4 border-0 focus-visible:ring-0 focus-visible:ring-offset-0"
+          className="resize-none flex-1 min-h-[52px] max-h-[200px] pr-12 py-3.5 px-0 border-0 bg-transparent focus-visible:ring-0 focus-visible:ring-offset-0 text-base placeholder:text-muted-foreground/60"
         />
         <Button
           onClick={handleSend}
           disabled={sending || !input.trim()}
           size="icon"
-          className="absolute right-6 bottom-6 h-12 w-12 rounded-lg-full disabled:opacity-50"
+          className="h-10 w-10 rounded-full bg-primary hover:bg-primary/90 disabled:opacity-40 disabled:cursor-not-allowed transition-all flex-shrink-0 shadow-lg"
         >
           {sending ? (
             <Loader2 className="h-4 w-4 animate-spin" />

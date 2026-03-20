@@ -7,7 +7,20 @@ const api = axios.create({
   headers: {
     "Content-Type": "application/json",
   },
+  timeout: 10000, // 10 second timeout
 })
+
+// Add error interceptor to handle API errors gracefully
+api.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    // Don't throw errors, just return them so components can handle gracefully
+    if (error.code === 'ECONNREFUSED' || error.message?.includes('Network Error')) {
+      console.warn('API server is not available. Please ensure the backend is running.')
+    }
+    return Promise.reject(error)
+  }
+)
 
 // Repository types
 export interface Repository {
@@ -127,5 +140,6 @@ export const chatApi = {
 }
 
 export default api
+
 
 

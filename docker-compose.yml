@@ -50,3 +50,9 @@ volumes:
   redis_data:
   qdrant_data:
 
+
+
+
+
+
+

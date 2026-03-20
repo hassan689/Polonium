@@ -149,3 +149,9 @@ Key services:
 - Redis: Caching (ready, not yet implemented)
 - OpenAI: LLM and embeddings
 
+
+
+
+
+
+

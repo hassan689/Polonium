@@ -10,3 +10,7 @@ from app.core.database import get_db
 # Type alias for database dependency
 DatabaseDep = Annotated[AsyncSession, Depends(get_db)]
 
+
+
+
+

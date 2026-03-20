@@ -1,5 +1,6 @@
 "use client"
 import { useState, useEffect } from "react"
+import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { repositoryApi, type Repository } from "@/lib/api"
@@ -10,6 +11,7 @@ import { ThemeToggle } from "@/components/theme/ThemeToggle"
 import StaggeredMenu from "@/components/StaggeredMenu"
 
 export default function HomePage() {
+  const router = useRouter()
   const [repositories, setRepositories] = useState<Repository[]>([])
   const [selectedRepo, setSelectedRepo] = useState<Repository | null>(null)
   const [loading, setLoading] = useState(true)
@@ -23,14 +25,16 @@ export default function HomePage() {
     try {
       setLoading(true)
       const data = await repositoryApi.list()
-      setRepositories(data)
+      setRepositories(data || [])
       // Auto-select first completed repository
-      const completed = data.find(r => r.status === "completed")
+      const completed = data?.find(r => r.status === "completed")
       if (completed) {
         setSelectedRepo(completed)
       }
-    } catch (error) {
+    } catch (error: any) {
+      // Silently handle errors - don't show error to user if API is not available
       console.error("Failed to load repositories:", error)
+      setRepositories([])
     } finally {
       setLoading(false)
     }
@@ -50,7 +54,22 @@ export default function HomePage() {
   }
 
   return (
-    <div className="relative h-screen bg-background overflow-hidden">
+    <div className="relative h-screen bg-gradient-to-br from-background via-background to-muted/20 overflow-hidden">
+      {/* Top Right Sign In Button */}
+      <div className="absolute top-5 right-8 z-50">
+        <Button
+          variant="ghost"
+          size="lg"
+          className="bg-card/80 backdrop-blur-sm hover:bg-accent/50 hover:text-accent-foreground border border-border/50 shadow-sm transition-colors"
+          onClick={() => {
+            const authUrl = `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/api/v1/auth/github`
+            window.location.href = authUrl
+          }}
+        >
+          Sign in
+        </Button>
+      </div>
+
       {/* Staggered Menu - Hidden by default, opens on Polonium click */}
       <StaggeredMenu
         position="left"
@@ -70,15 +89,18 @@ export default function HomePage() {
             <div className="flex items-center gap-2 mb-4">
               <h1 className="font-semibold text-lg text-black dark:text-white">Polonium</h1>
             </div>
-            <Link
-              href="/repositories/new"
-              className="w-full"
+            <Button 
+              className="w-full bg-transparent hover:bg-gray-100 dark:hover:bg-gray-800 text-black dark:text-white border-0 shadow-none" 
+              size="sm"
+              variant="ghost"
+              onClick={() => {
+                setSidebarOpen(false)
+                router.push('/repositories/new')
+              }}
             >
-              <Button className="w-full" size="sm">
-                <Plus className="mr-2 h-4 w-4" />
-                New Repository
-              </Button>
-            </Link>
+              <Plus className="mr-2 h-4 w-4" />
+              New Repository
+            </Button>
           </div>
 
           <ScrollArea className="flex-1 min-h-0">
@@ -108,8 +130,8 @@ export default function HomePage() {
                       }}
                       className={`w-full text-left px-3 py-2 rounded-md text-sm transition-colors ${
                         selectedRepo?.id === repo.id
-                          ? "bg-accent text-accent-foreground"
-                          : "hover:bg-accent/50"
+                          ? "bg-gray-100 dark:bg-gray-800 text-black dark:text-white"
+                          : "bg-transparent hover:bg-gray-100 dark:hover:bg-gray-800"
                       } ${
                         repo.status !== "completed" ? "opacity-60 cursor-not-allowed" : ""
                       }`}
@@ -146,15 +168,12 @@ export default function HomePage() {
             {/* Authentication Section */}
             <div className="pt-2 border-t border-gray-200 dark:border-gray-700 space-y-2">
               <Button 
-                className="w-full" 
+                className="w-full bg-transparent hover:bg-gray-100 dark:hover:bg-gray-800 text-black dark:text-white border-0 shadow-none" 
                 size="sm" 
-                variant="outline"
+                variant="ghost"
                 onClick={() => {
-                  // TODO: Implement Discord OAuth
-                  const authUrl = `/api/auth/discord`
-                  if (authUrl) {
-                    window.location.href = authUrl
-                  }
+                  const authUrl = `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/api/v1/auth/github`
+                  window.location.href = authUrl
                 }}
               >
                 <svg className="mr-2 h-4 w-4" viewBox="0 0 24 24" fill="currentColor">

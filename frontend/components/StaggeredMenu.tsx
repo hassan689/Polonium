@@ -83,9 +83,10 @@ export const StaggeredMenu: React.FC<StaggeredMenuProps> = ({
       if (!panel) return
 
       // For fixed positioning, use x transform instead of xPercent
-      const panelWidth = panel.offsetWidth || 400
+      // Use fixed width (matches CSS clamp(320px, 38vw, 480px) max value)
+      const panelWidth = 480
       const offscreen = position === 'left' ? -panelWidth : panelWidth
-      gsap.set(panel, { x: offscreen, visibility: 'visible' })
+      gsap.set(panel, { x: offscreen, opacity: 0, pointerEvents: 'none' })
 
       if (plusH && plusV) {
         gsap.set(plusH, { transformOrigin: '50% 50%', rotate: 0 })
@@ -122,7 +123,8 @@ export const StaggeredMenu: React.FC<StaggeredMenuProps> = ({
     const socialTitle = panel.querySelector('.sm-socials-title') as HTMLElement | null
     const socialLinks = Array.from(panel.querySelectorAll('.sm-socials-link')) as HTMLElement[]
 
-    const panelWidth = panel.offsetWidth || 400
+    // Use fixed width calculation (matches CSS clamp(320px, 38vw, 480px))
+    const panelWidth = 480
     const offscreen = position === 'left' ? -panelWidth : panelWidth
     const panelStart = Number(gsap.getProperty(panel, 'x')) || offscreen
 
@@ -135,11 +137,11 @@ export const StaggeredMenu: React.FC<StaggeredMenuProps> = ({
 
     // Slide in panel (overlay removed - no blur)
     const panelDuration = 0.65
-    gsap.set(panel, { visibility: 'visible' })
+    gsap.set(panel, { opacity: 1, pointerEvents: 'auto' })
     tl.fromTo(
       panel,
-      { x: panelStart },
-      { x: 0, duration: panelDuration, ease: 'power4.out' },
+      { x: panelStart, opacity: 0 },
+      { x: 0, opacity: 1, duration: panelDuration, ease: 'power4.out' },
       0.1
     )
 
@@ -224,17 +226,19 @@ export const StaggeredMenu: React.FC<StaggeredMenuProps> = ({
 
     closeTweenRef.current?.kill()
 
-    const panelWidth = panel.offsetWidth || 400
+    // Use fixed width calculation (matches CSS clamp(320px, 38vw, 480px))
+    const panelWidth = 480
     const offscreen = position === 'left' ? -panelWidth : panelWidth
 
-    // Slide out panel (overlay removed)
+    // Slide out panel
     closeTweenRef.current = gsap.to(panel, {
       x: offscreen,
+      opacity: 0,
+      pointerEvents: 'none',
       duration: 0.32,
       ease: 'power3.in',
       overwrite: 'auto',
       onComplete: () => {
-        gsap.set(panel, { visibility: 'hidden' })
         const itemEls = Array.from(panel.querySelectorAll('.sm-panel-itemLabel')) as HTMLElement[]
         if (itemEls.length) gsap.set(itemEls, { yPercent: 140, rotate: 10 })
 
@@ -380,119 +384,14 @@ export const StaggeredMenu: React.FC<StaggeredMenuProps> = ({
     setTextLines(seq)
   }, [open])
 
-  return (
-    <div
-      className={`sm-scope ${isFixed ? 'fixed top-0 left-0 w-screen h-screen' : 'w-full h-full'}`}
-      style={{ pointerEvents: 'none', zIndex: 40 }}
-    >
-      <div
-        className={
-          (className ? className + ' ' : '') +
-          'staggered-menu-wrapper pointer-events-none relative w-full h-full'
-        }
-        style={accentColor ? ({ ['--sm-accent' as any]: accentColor } as React.CSSProperties) : undefined}
-        data-position={position}
-        data-open={open || undefined}
-      >
-        {/* Overlay - removed blur and click-to-close */}
+  // Inject styles only on client side to prevent hydration mismatch
+  React.useEffect(() => {
+    const styleId = 'staggered-menu-styles'
+    if (document.getElementById(styleId)) return
 
-        {/* Header with logo button */}
-        <header
-          className="staggered-menu-header absolute top-0 left-0 w-full flex items-center p-8 bg-transparent pointer-events-none z-20"
-          aria-label="Main navigation header"
-        >
-          <button
-            onClick={toggleMenu}
-            className="sm-logo flex items-center select-none pointer-events-auto cursor-pointer bg-transparent border-0 p-0 hover:opacity-80 transition-opacity"
-            aria-label="Toggle menu"
-            type="button"
-          >
-            {logoUrl ? (
-              <img
-                src={logoUrl}
-                alt="Logo"
-                className="sm-logo-img block h-8 w-auto object-contain"
-                draggable={false}
-              />
-            ) : (
-              <span className="text-xl font-semibold text-white">Polonium</span>
-            )}
-          </button>
-        </header>
-
-        {/* Sidebar Panel */}
-        <aside
-          id="staggered-menu-panel"
-          ref={panelRef}
-          className="staggered-menu-panel fixed top-0 left-0 h-full bg-white dark:bg-gray-900 flex flex-col overflow-y-auto z-[50] shadow-2xl pointer-events-auto"
-          style={{ visibility: 'hidden' }}
-          aria-hidden={!open}
-        >
-          <div className="sm-panel-inner flex-1 flex flex-col h-full">
-            {/* Custom children content */}
-            {children && <div className="sm-panel-custom w-full h-full flex flex-col">{children}</div>}
-
-            {/* Menu items */}
-            {items && items.length > 0 && (
-              <ul
-                className="sm-panel-list list-none m-0 p-0 flex flex-col gap-2"
-                role="list"
-                data-numbering={displayItemNumbering || undefined}
-              >
-                {items.map((it, idx) => (
-                  <li className="sm-panel-itemWrap relative overflow-hidden leading-none" key={it.label + idx}>
-                    <a
-                      className="sm-panel-item relative text-black dark:text-white font-semibold text-[4rem] cursor-pointer leading-none tracking-[-2px] uppercase transition-[background,color] duration-150 ease-linear inline-block no-underline pr-[1.4em]"
-                      href={it.link}
-                      onClick={(e) => {
-                        if (it.onClick) {
-                          e.preventDefault()
-                          it.onClick()
-                          closeMenu()
-                        }
-                      }}
-                      aria-label={it.ariaLabel}
-                      data-index={idx + 1}
-                    >
-                      <span className="sm-panel-itemLabel inline-block [transform-origin:50%_100%] will-change-transform">
-                        {it.label}
-                      </span>
-                    </a>
-                  </li>
-                ))}
-              </ul>
-            )}
-
-            {/* Social links */}
-            {displaySocials && socialItems && socialItems.length > 0 && (
-              <div className="sm-socials mt-auto pt-8 flex flex-col gap-3" aria-label="Social links">
-                <h3 className="sm-socials-title m-0 text-base font-medium [color:var(--sm-accent,#5227FF)]">
-                  Socials
-                </h3>
-                <ul
-                  className="sm-socials-list list-none m-0 p-0 flex flex-row items-center gap-4 flex-wrap"
-                  role="list"
-                >
-                  {socialItems.map((s, i) => (
-                    <li key={s.label + i} className="sm-socials-item">
-                      <a
-                        href={s.link}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="sm-socials-link text-[1.2rem] font-medium text-[#111] dark:text-white no-underline relative inline-block py-[2px] transition-[color,opacity] duration-300 ease-linear"
-                      >
-                        {s.label}
-                      </a>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            )}
-          </div>
-        </aside>
-      </div>
-
-      <style>{`
+    const style = document.createElement('style')
+    style.id = styleId
+    style.textContent = `
         .sm-scope .staggered-menu-wrapper {
           position: relative;
           width: 100%;
@@ -727,7 +626,131 @@ export const StaggeredMenu: React.FC<StaggeredMenuProps> = ({
             right: 0;
           }
         }
-      `}</style>
+      `
+    document.head.appendChild(style)
+
+    return () => {
+      const existingStyle = document.getElementById(styleId)
+      if (existingStyle) {
+        existingStyle.remove()
+      }
+    }
+  }, [])
+
+  return (
+    <div
+      className={`sm-scope ${isFixed ? 'fixed top-0 left-0 w-screen h-screen' : 'w-full h-full'}`}
+      style={{ pointerEvents: 'none', zIndex: 40 }}
+    >
+      <div
+        className={
+          (className ? className + ' ' : '') +
+          'staggered-menu-wrapper pointer-events-none relative w-full h-full'
+        }
+        style={accentColor ? ({ ['--sm-accent' as any]: accentColor } as React.CSSProperties) : undefined}
+        data-position={position}
+        data-open={open || undefined}
+      >
+        {/* Overlay - removed blur and click-to-close */}
+
+        {/* Header with logo button */}
+        <header
+          className="staggered-menu-header absolute top-0 left-0 w-full flex items-center p-8 bg-transparent pointer-events-none z-20"
+          aria-label="Main navigation header"
+        >
+          <button
+            onClick={toggleMenu}
+            className="sm-logo flex items-center select-none pointer-events-auto cursor-pointer bg-transparent border-0 p-0 hover:opacity-80 transition-opacity"
+            aria-label="Toggle menu"
+            type="button"
+          >
+            {logoUrl ? (
+              <img
+                src={logoUrl}
+                alt="Logo"
+                className="sm-logo-img block h-8 w-auto object-contain"
+                draggable={false}
+              />
+            ) : (
+              <span className="text-xl font-semibold text-white">Polonium</span>
+            )}
+          </button>
+        </header>
+
+        {/* Sidebar Panel */}
+        <aside
+          id="staggered-menu-panel"
+          ref={panelRef}
+          className="staggered-menu-panel fixed top-0 left-0 h-full bg-white dark:bg-gray-900 flex flex-col overflow-y-auto z-[50] shadow-2xl"
+          style={{ 
+            pointerEvents: open ? 'auto' : 'none',
+            opacity: open ? 1 : 0
+          }}
+          aria-hidden={!open}
+        >
+          <div className="sm-panel-inner flex-1 flex flex-col h-full">
+            {/* Custom children content */}
+            {children && <div className="sm-panel-custom w-full h-full flex flex-col">{children}</div>}
+
+            {/* Menu items */}
+            {items && items.length > 0 && (
+              <ul
+                className="sm-panel-list list-none m-0 p-0 flex flex-col gap-2"
+                role="list"
+                data-numbering={displayItemNumbering || undefined}
+              >
+                {items.map((it, idx) => (
+                  <li className="sm-panel-itemWrap relative overflow-hidden leading-none" key={it.label + idx}>
+                    <a
+                      className="sm-panel-item relative text-black dark:text-white font-semibold text-[4rem] cursor-pointer leading-none tracking-[-2px] uppercase transition-[background,color] duration-150 ease-linear inline-block no-underline pr-[1.4em]"
+                      href={it.link}
+                      onClick={(e) => {
+                        if (it.onClick) {
+                          e.preventDefault()
+                          it.onClick()
+                          closeMenu()
+                        }
+                      }}
+                      aria-label={it.ariaLabel}
+                      data-index={idx + 1}
+                    >
+                      <span className="sm-panel-itemLabel inline-block [transform-origin:50%_100%] will-change-transform">
+                        {it.label}
+                      </span>
+                    </a>
+                  </li>
+                ))}
+              </ul>
+            )}
+
+            {/* Social links */}
+            {displaySocials && socialItems && socialItems.length > 0 && (
+              <div className="sm-socials mt-auto pt-8 flex flex-col gap-3" aria-label="Social links">
+                <h3 className="sm-socials-title m-0 text-base font-medium [color:var(--sm-accent,#5227FF)]">
+                  Socials
+                </h3>
+                <ul
+                  className="sm-socials-list list-none m-0 p-0 flex flex-row items-center gap-4 flex-wrap"
+                  role="list"
+                >
+                  {socialItems.map((s, i) => (
+                    <li key={s.label + i} className="sm-socials-item">
+                      <a
+                        href={s.link}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="sm-socials-link text-[1.2rem] font-medium text-[#111] dark:text-white no-underline relative inline-block py-[2px] transition-[color,opacity] duration-300 ease-linear"
+                      >
+                        {s.label}
+                      </a>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+          </div>
+        </aside>
+      </div>
     </div>
   )
 }
