@@ -11,7 +11,66 @@ An open-source, AI-powered collaborative workspace for developers to understand,
 - **File Explanations**: Context-aware explanations for individual files
 - **Collaborative Chat**: Real-time shared chat per repository with persistent history
 - **Persistent Memory**: Repository-level AI memory that learns and remembers insights
+## 🚀 Development Roadmap
 
+Polonium is being built in structured phases to deliver a powerful, AI-assisted workspace for understanding and contributing to open-source projects.
+
+---
+
+### 🥇 Phase 1 — Strong Product Identity
+
+Focus: **Deep repository understanding and contribution guidance**
+
+- 🧠 **Repository Architecture Visualization**  
+  Interactive representation of modules, dependencies, and system structure
+
+- 🚀 **Contribution Assistant**  
+  Step-by-step guidance to help users start contributing بسرعة
+
+- 🔍 **Beginner Issue Detection**  
+  Identify and recommend beginner-friendly issues from the repository
+
+- 📊 **Smart Repository Summary**  
+  High-quality, context-aware summaries (not generic AI output)
+
+---
+
+### 🥈 Phase 2 — Collaboration Layer
+
+Focus: **Making Polonium a shared developer workspace**
+
+- 💬 **Inline Code Comments**  
+  Add discussions directly on specific lines or functions
+
+- 🧵 **Threaded Discussions**  
+  Structured conversations for better clarity and collaboration
+
+- 📝 **Shared Workspace Notes**  
+  Persistent notes accessible by all collaborators
+
+- 🤖 **AI-Assisted Discussions**  
+  AI participates in conversations to explain, guide, and assist
+
+---
+
+### 🥉 Phase 3 — Light Action Layer
+
+Focus: **Assist contributions without full automation**
+
+- ✨ **Code Suggestions**  
+  Context-aware recommendations for improving code
+
+- 📄 **PR Draft Generation**  
+  Automatically generate pull request descriptions
+
+- 🛠️ **Fix Suggestions**  
+  Suggest improvements without directly modifying files
+
+---
+
+### 🎯 Vision
+
+> **Polonium aims to make understanding, collaborating, and contributing to open source effortless.**
 
 ###  Main Product Flow
 ```mermaid
