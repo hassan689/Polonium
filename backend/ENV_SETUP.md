@@ -48,10 +48,12 @@ QDRANT_COLLECTION_NAME=polonium_embeddings
 # Workspace Storage - Where cloned repositories are stored
 WORKSPACE_STORAGE_PATH=./workspaces
 
-# OpenAI - REQUIRED FOR AI FEATURES
-OPENAI_API_KEY=your_openai_api_key_here
-OPENAI_MODEL=gpt-4-turbo-preview
-OPENAI_EMBEDDING_MODEL=text-embedding-3-small
+# Local AI provider (OpenAI-compatible API format)
+LOCAL_LLM_BASE_URL=http://localhost:11434/v1
+LOCAL_LLM_API_KEY=
+LOCAL_LLM_MODEL=llama3.1:8b
+LOCAL_EMBEDDING_MODEL=nomic-embed-text
+EMBEDDING_VECTOR_SIZE=768
 
 # Security
 SECRET_KEY=change-me-in-production-use-a-random-string-here
@@ -59,15 +61,17 @@ SECRET_KEY=change-me-in-production-use-a-random-string-here
 
 ## Required Credentials
 
-### 1. OpenAI API Key (Required for AI Features)
+### 1. Local Model Endpoint (Required for AI Features)
 
-**Get from:** https://platform.openai.com/api-keys
+Use a local model runtime that exposes OpenAI-compatible endpoints (for example Ollama/LM Studio).
 
-1. Create an API key
-2. Add to `.env`:
-   ```env
-   OPENAI_API_KEY=sk-...
-   ```
+Add to `.env`:
+```env
+LOCAL_LLM_BASE_URL=http://localhost:11434/v1
+LOCAL_LLM_MODEL=llama3.1:8b
+LOCAL_EMBEDDING_MODEL=nomic-embed-text
+EMBEDDING_VECTOR_SIZE=768
+```
 
 ### 3. Database (Required)
 
@@ -125,10 +129,12 @@ GITHUB_OAUTH_REDIRECT_URI=http://localhost:8000/api/v1/auth/github/callback
 # Workspace Storage
 WORKSPACE_STORAGE_PATH=./workspaces
 
-# OpenAI
-OPENAI_API_KEY=sk-proj-abc123def456ghi789jkl012mno345pqr678stu901vwx234
-OPENAI_MODEL=gpt-4-turbo-preview
-OPENAI_EMBEDDING_MODEL=text-embedding-3-small
+# Local AI provider
+LOCAL_LLM_BASE_URL=http://localhost:11434/v1
+LOCAL_LLM_API_KEY=
+LOCAL_LLM_MODEL=llama3.1:8b
+LOCAL_EMBEDDING_MODEL=nomic-embed-text
+EMBEDDING_VECTOR_SIZE=768
 
 # Security
 SECRET_KEY=my-super-secret-key-change-this-in-production-12345

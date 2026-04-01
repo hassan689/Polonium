@@ -219,6 +219,14 @@ flowchart TD
 │  │  - Branch Analysis Service        │  │
 │  └───────────┬───────────────────────┘  │
 │              │                           │
+│  ┌───────────▼───────────────────────┐  │
+│  │   Background Worker Layer         │  │
+│  │  - Celery / RQ                    │  │
+│  │  - Async indexing jobs            │  │
+│  │  - Embedding generation jobs      │  │
+│  │  - Large AI processing jobs       │  │
+│  └───────────┬───────────────────────┘  │
+│              │                           │
 └──────────────┼───────────────────────────┘
                │
     ┌──────────┼──────────┐
@@ -335,7 +343,7 @@ flowchart TD
 - Connection pooling for databases
 - Caching layer with Redis
 - Vector search optimization in Qdrant
-- Background job queue for ingestion
+- Background worker queue with Celery/RQ + Redis for ingestion, embedding generation, and large AI processing jobs
 - WebSocket connection pooling
 - Incremental sync (only changed files)
 

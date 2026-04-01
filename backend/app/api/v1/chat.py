@@ -1,12 +1,14 @@
 """
-Chat API endpoints for repository discussions.
+This module provides chat endpoints for repository discussions, including
+context retrieval from memory and file embeddings, persistence of chat history,
+and AI-assisted responses for repository-aware conversations.
 """
 from typing import List
-from fastapi import APIRouter, HTTPException, WebSocket, WebSocketDisconnect
-from sqlalchemy.ext.asyncio import AsyncSession
+from fastapi import APIRouter, HTTPException, WebSocket, WebSocketDisconnect, Request
 from sqlalchemy import select
 
 from app.core.dependencies import DatabaseDep
+from app.core.rate_limit import rate_limit
 from app.models.repository import Repository, RepositoryStatus
 from app.models.chat import ChatMessage, MessageRole
 from app.schemas.chat import ChatMessageCreate, ChatMessageResponse
@@ -18,7 +20,9 @@ router = APIRouter()
 
 
 @router.post("/repositories/{repository_id}/chat", response_model=ChatMessageResponse)
+@rate_limit(limit=60, window=60)
 async def send_chat_message(
+    request: Request,
     repository_id: int,
     message: ChatMessageCreate,
     db: DatabaseDep,
@@ -27,7 +31,6 @@ async def send_chat_message(
     Send a chat message and get AI response.
     This is the REST endpoint for non-real-time chat.
     """
-    # Fetch repository
     stmt = select(Repository).where(Repository.id == repository_id)
     result = await db.execute(stmt)
     repository = result.scalar_one_or_none()
@@ -41,7 +44,6 @@ async def send_chat_message(
             detail=f"Repository ingestion not completed. Status: {repository.status}",
         )
     
-    # Save user message
     user_message = ChatMessage(
         repository_id=repository_id,
         role=MessageRole.USER,
@@ -50,12 +52,10 @@ async def send_chat_message(
     db.add(user_message)
     await db.flush()
     
-    # Get relevant context
     ai_service = AIService()
     memory_service = MemoryService()
     embedding_service = EmbeddingService()
     
-    # Get relevant memories
     memories = await memory_service.get_relevant_memories(
         db=db,
         repository_id=repository_id,
@@ -64,7 +64,6 @@ async def send_chat_message(
     )
     memory_texts = [f"{m.title}: {m.content}" for m in memories]
     
-    # Get relevant files using semantic search
     query_embedding = await embedding_service.generate_embedding(message.content)
     similar_files = await embedding_service.search_similar(
         query_vector=query_embedding,
@@ -77,7 +76,6 @@ async def send_chat_message(
         },
     )
     
-    # Fetch file contents
     from app.models.file import File
     file_ids = [f["payload"]["file_id"] for f in similar_files]
     relevant_files = []
@@ -88,12 +86,11 @@ async def send_chat_message(
         relevant_files = [
             {
                 "path": f.path,
-                "content": f.content[:2000] if f.content else "",  # Limit content
+                "content": f.content[:2000] if f.content else "",
             }
             for f in files
         ]
     
-    # Get chat history
     stmt = select(ChatMessage).where(
         ChatMessage.repository_id == repository_id,
     ).order_by(ChatMessage.created_at.desc()).limit(10)
@@ -104,10 +101,8 @@ async def send_chat_message(
         for msg in history_messages
     ]
     
-    # Generate repository context
     repo_context = f"Repository: {repository.github_full_name}\nDescription: {repository.github_description or 'N/A'}"
     
-    # Generate AI response
     ai_response = await ai_service.generate_chat_response(
         user_message=message.content,
         repository_context=repo_context,
@@ -116,7 +111,6 @@ async def send_chat_message(
         memories=memory_texts,
     )
     
-    # Save AI response
     ai_message = ChatMessage(
         repository_id=repository_id,
         role=MessageRole.ASSISTANT,
@@ -141,7 +135,6 @@ async def get_chat_history(
     limit: int = 100,
 ):
     """Get chat history for a repository."""
-    # Verify repository exists
     stmt = select(Repository).where(Repository.id == repository_id)
     result = await db.execute(stmt)
     repository = result.scalar_one_or_none()
@@ -149,7 +142,6 @@ async def get_chat_history(
     if not repository:
         raise HTTPException(status_code=404, detail="Repository not found")
     
-    # Fetch messages
     stmt = (
         select(ChatMessage)
         .where(ChatMessage.repository_id == repository_id)
@@ -173,13 +165,9 @@ async def websocket_chat(
     """
     await websocket.accept()
     
-    # TODO: Implement WebSocket chat with database session management
-    # This requires more complex session handling for async operations
-    
     try:
         while True:
             data = await websocket.receive_text()
-            # Echo for now - full implementation would use AI service
             await websocket.send_text(f"Echo: {data}")
     except WebSocketDisconnect:
         pass

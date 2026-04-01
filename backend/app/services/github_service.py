@@ -1,5 +1,7 @@
 """
-GitHub API integration service.
+This module provides a focused GitHub API client for repository ingestion workflows.
+It fetches repository metadata, recursive file trees, and file content while applying
+consistent headers and filtering helpers used by downstream ingestion services.
 """
 import httpx
 from typing import Optional, Dict, List, Any
@@ -68,13 +70,10 @@ class GitHubService:
             List of file/directory entries
         """
         if recursive:
-            # Use Git Trees API for recursive fetching
             async with httpx.AsyncClient() as client:
-                # Get default branch
                 repo_info = await self.get_repository(owner, name)
                 default_branch = repo_info.get("default_branch", "main")
-                
-                # Get tree SHA
+
                 branch_response = await client.get(
                     f"{self.BASE_URL}/repos/{owner}/{name}/branches/{default_branch}",
                     headers=self.headers,
@@ -83,25 +82,22 @@ class GitHubService:
                 branch_response.raise_for_status()
                 branch_data = branch_response.json()
                 tree_sha = branch_data["commit"]["commit"]["tree"]["sha"]
-                
-                # Get recursive tree
+
                 tree_response = await client.get(
                     f"{self.BASE_URL}/repos/{owner}/{name}/git/trees/{tree_sha}",
                     headers=self.headers,
                     params={"recursive": "1"},
-                    timeout=60.0,  # Longer timeout for large repos
+                    timeout=60.0,
                 )
                 tree_response.raise_for_status()
                 tree_data = tree_response.json()
-                
-                # Filter to only files (not directories)
+
                 files = [
                     entry for entry in tree_data.get("tree", [])
                     if entry.get("type") == "blob"
                 ]
                 return files
         else:
-            # Use Contents API (non-recursive)
             async with httpx.AsyncClient() as client:
                 response = await client.get(
                     f"{self.BASE_URL}/repos/{owner}/{name}/contents/{path}",
@@ -136,8 +132,7 @@ class GitHubService:
             )
             response.raise_for_status()
             data = response.json()
-            
-            # Decode base64 content
+
             import base64
             content = base64.b64decode(data["content"]).decode("utf-8")
             return content
@@ -152,7 +147,6 @@ class GitHubService:
         Returns:
             True if file should be ignored
         """
-        # Common ignore patterns
         ignore_patterns = [
             ".git",
             "node_modules",

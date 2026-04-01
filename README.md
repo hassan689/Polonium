@@ -117,11 +117,15 @@ flowchart TD
 ```mermaid
 flowchart LR
     FE[Frontend] --> BE[Backend]
+    BE --> BW[Background Workers]
     BE --> PG[(PostgreSQL)]
     BE --> VDB[(Qdrant)]
     BE --> REDIS[Redis]
     BE --> LLM[LLM Provider]
     BE --> GH[GitHub API]
+    BW --> REDIS
+    BW --> VDB
+    BW --> LLM
 ```
 ## Architecture
 
@@ -130,7 +134,8 @@ Polonium follows a clean, modular architecture:
 - **Frontend**: Next.js with TypeScript, Tailwind CSS, shadcn/ui, Monaco Editor
 - **Backend**: FastAPI (Python) with async/await throughout
 - **Database**: PostgreSQL for core data, Qdrant for vector embeddings, Redis for caching
-- **AI**: OpenAI (swappable LLM abstraction), LangChain-ready
+- **AI**: Local/open-source model provider via OpenAI-compatible API format (swappable abstraction), LangChain-ready
+- **Background Workers (Recommended)**: Celery or RQ with Redis for asynchronous heavy jobs (repository indexing, embedding generation, and large AI processing tasks)
 
 See [ARCHITECTURE.md](./ARCHITECTURE.md) for detailed architecture documentation.
 
@@ -161,7 +166,7 @@ pip install -r requirements.txt
 3. Set up environment variables:
 ```bash
 cp .env.example .env
-# Edit .env with your configuration (OpenAI API key, database URLs, etc.)
+# Edit .env with your configuration (local LLM endpoint, database URLs, etc.)
 ```
 
 4. Set up databases:
@@ -233,6 +238,9 @@ Polonium/
 │   ├── alembic/       # Database migrations
 │   └── requirements.txt
 ├── frontend/          # Next.js frontend (coming soon)
+├── desktop/           # Tauri desktop shell
+├── cli/               # Top-level CLI wrapper and docs
+├── shared/            # Cross-layer prompts and utilities
 ├── ARCHITECTURE.md    # Architecture documentation
 └── README.md
 ```

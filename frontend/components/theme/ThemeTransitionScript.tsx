@@ -8,13 +8,9 @@ export function ThemeTransitionScript() {
 
   useEffect(() => {
     const html = document.documentElement
-    
-    // Add transitioning class when theme changes
     html.classList.add("theme-transitioning")
-    
-    // Remove the class after transition completes
     const timeout = setTimeout(() => {
-      html.classList.remove("theme-transitioning")
+    html.classList.remove("theme-transitioning")
     }, 800)
     
     return () => {

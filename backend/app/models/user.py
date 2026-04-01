@@ -1,5 +1,6 @@
 """
-User model for authentication.
+This module defines user persistence for authentication and identity mapping,
+including GitHub profile fields and relationships to repository chat records.
 """
 from datetime import datetime
 from sqlalchemy import Column, Integer, String, DateTime, Text
@@ -19,15 +20,12 @@ class User(Base):
     github_email = Column(String(255), nullable=True)
     github_avatar_url = Column(String(1024), nullable=True)
     
-    # OAuth token (encrypted in production)
     github_access_token = Column(Text, nullable=True)
-    
-    # Timestamps
+
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
     last_login_at = Column(DateTime, nullable=True)
     
-    # Relationships
     chat_messages = relationship("ChatMessage", back_populates="user")
     
     def __repr__(self) -> str:

@@ -10,7 +10,7 @@ This document provides step-by-step instructions to set up and run the Polonium 
 - PostgreSQL 14+ (or use Docker)
 - Redis 6+ (or use Docker)
 - Qdrant vector database (or use Docker)
-- OpenAI API key
+- Local/open-source model endpoint (OpenAI-compatible API)
 
 ## Quick Start with Docker
 
@@ -57,7 +57,10 @@ Edit `.env` and set the following required variables:
 
 ```env
 # Required
-OPENAI_API_KEY=your_openai_api_key_here
+LOCAL_LLM_BASE_URL=http://localhost:11434/v1
+LOCAL_LLM_MODEL=llama3.1:8b
+LOCAL_EMBEDDING_MODEL=nomic-embed-text
+EMBEDDING_VECTOR_SIZE=768
 DATABASE_URL=postgresql+asyncpg://postgres:postgres@localhost:5432/polonium
 REDIS_URL=redis://localhost:6379/0
 QDRANT_URL=http://localhost:6333
@@ -144,7 +147,7 @@ curl -X POST "http://localhost:8000/api/v1/repositories/1/chat" \
 
 - **GitHubService**: Fetches repository data from GitHub API
 - **RepoIngestionService**: Orchestrates repository ingestion (files, embeddings, overview)
-- **EmbeddingService**: Manages vector embeddings (OpenAI + Qdrant)
+- **EmbeddingService**: Manages vector embeddings (local embedding model + Qdrant)
 - **AIService**: Handles LLM interactions (overviews, explanations, chat)
 - **MemoryService**: Manages persistent repository-level memory
 
@@ -176,11 +179,11 @@ curl -X POST "http://localhost:8000/api/v1/repositories/1/chat" \
 - Verify Qdrant is running: `curl http://localhost:6333/health`
 - Check QDRANT_URL in `.env`
 
-### OpenAI API Issues
+### Local LLM / Embedding Issues
 
-- Verify OPENAI_API_KEY is set correctly
-- Check API quota/limits
-- Ensure you have credits
+- Verify `LOCAL_LLM_BASE_URL` is reachable
+- Verify local model names are installed and correct
+- Ensure `EMBEDDING_VECTOR_SIZE` matches your embedding model output dimension
 
 ### Ingestion Fails
 

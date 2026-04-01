@@ -5,11 +5,12 @@ import { useParams } from "next/navigation"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { repositoryApi, fileApi, type Repository, type RepositoryOverview, type File } from "@/lib/api"
-import { Loader2, FileText, MessageSquare, Code } from "lucide-react"
+import { Loader2, FileText, MessageSquare, Code, Brain } from "lucide-react"
 import Link from "next/link"
 import RepositoryOverviewTab from "@/components/repository/OverviewTab"
 import RepositoryFilesTab from "@/components/repository/FilesTab"
 import RepositoryChatTab from "@/components/repository/ChatTab"
+import RepositoryMemoryTab from "@/components/repository/MemoryTab"
 
 export default function RepositoryDetailPage() {
   const params = useParams()
@@ -112,7 +113,7 @@ export default function RepositoryDetailPage() {
 
       {repository.status === "completed" ? (
         <Tabs value={activeTab} onValueChange={setActiveTab}>
-          <TabsList className="grid w-full grid-cols-3">
+          <TabsList className="grid w-full grid-cols-4">
             <TabsTrigger value="overview">
               <FileText className="mr-2 h-4 w-4" />
               Overview
@@ -124,6 +125,10 @@ export default function RepositoryDetailPage() {
             <TabsTrigger value="chat">
               <MessageSquare className="mr-2 h-4 w-4" />
               Chat
+            </TabsTrigger>
+            <TabsTrigger value="memory">
+              <Brain className="mr-2 h-4 w-4" />
+              Memory
             </TabsTrigger>
           </TabsList>
 
@@ -137,6 +142,10 @@ export default function RepositoryDetailPage() {
 
           <TabsContent value="chat" className="mt-6">
             <RepositoryChatTab repositoryId={repositoryId} />
+          </TabsContent>
+
+          <TabsContent value="memory" className="mt-6">
+            <RepositoryMemoryTab repositoryId={repositoryId} />
           </TabsContent>
         </Tabs>
       ) : repository.status === "in_progress" ? (

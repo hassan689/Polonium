@@ -1,5 +1,7 @@
 """
-Repository ingestion service that works with cloned repositories.
+This module ingests repositories from local cloned storage for offline-first workflows.
+It scans and filters files from a local repo path, persists normalized file records,
+generates embeddings, and stores repository overview memory using the shared AI services.
 """
 import hashlib
 from typing import Optional
@@ -59,7 +61,6 @@ class RepoIngestionFromCloneService:
         
         path_str = str(file_path)
         
-        # Check if any ignore pattern matches
         for pattern in ignore_patterns:
             if pattern in path_str:
                 return True
@@ -124,7 +125,6 @@ class RepoIngestionFromCloneService:
         Returns:
             Updated Repository object
         """
-        # Fetch repository
         stmt = select(Repository).where(Repository.id == repository_id)
         result = await db.execute(stmt)
         repo = result.scalar_one_or_none()
@@ -132,49 +132,38 @@ class RepoIngestionFromCloneService:
         if not repo:
             raise ValueError(f"Repository {repository_id} not found")
         
-        # Check if repository is cloned
         repo_path = self.clone_service.get_repository_path(repository_id)
         if not repo_path.exists():
             raise ValueError(f"Repository {repository_id} is not cloned. Please clone it first.")
         
-        # Update status
         repo.status = RepositoryStatus.IN_PROGRESS
         repo.ingestion_started_at = datetime.utcnow()
         await db.commit()
         
         try:
-            # Process files from cloned repository
             processed_files = []
             total_size = 0
-            
-            # Walk through repository directory
+
             for file_path in repo_path.rglob("*"):
-                # Skip directories
                 if file_path.is_dir():
                     continue
-                
-                # Skip ignored files
+
                 if self.should_ignore_file(file_path):
                     continue
-                
-                # Get relative path from repo root
+
                 try:
                     relative_path = file_path.relative_to(repo_path)
                 except ValueError:
                     continue
-                
-                # Skip very large files (>1MB)
+
                 if file_path.stat().st_size > 1_000_000:
                     continue
                 
                 try:
-                    # Read file content
                     file_content = file_path.read_text(encoding="utf-8", errors="ignore")
-                    
-                    # Create or update file record
+
                     file_hash = hashlib.sha256(file_content.encode()).hexdigest()
-                    
-                    # Check if file already exists
+
                     stmt = select(File).where(
                         File.repository_id == repository_id,
                         File.path == str(relative_path),
@@ -183,12 +172,10 @@ class RepoIngestionFromCloneService:
                     existing_file = result.scalar_one_or_none()
                     
                     if existing_file and existing_file.content_hash == file_hash:
-                        # File unchanged, skip
                         processed_files.append(existing_file)
                         total_size += existing_file.size_bytes
                         continue
-                    
-                    # Create new file or update existing
+
                     language = self._detect_language(file_path)
                     
                     file_data = {
@@ -204,20 +191,17 @@ class RepoIngestionFromCloneService:
                     }
                     
                     if existing_file:
-                        # Update existing
                         for key, value in file_data.items():
                             if key != "repository_id":
                                 setattr(existing_file, key, value)
                         file_obj = existing_file
                     else:
-                        # Create new
                         file_obj = File(**file_data)
                         db.add(file_obj)
                     
                     await db.flush()
                     
-                    # Generate embedding
-                    embedding_text = f"{relative_path}\n{file_content[:5000]}"  # Limit for embedding
+                    embedding_text = f"{relative_path}\n{file_content[:5000]}"
                     embedding = await self.embedding_service.generate_embedding(embedding_text)
                     
                     point_id = f"file_{file_obj.id}"
@@ -238,25 +222,21 @@ class RepoIngestionFromCloneService:
                     total_size += file_obj.size_bytes
                     
                 except Exception as e:
-                    # Log error but continue with other files
                     print(f"Error processing file {relative_path}: {e}")
                     continue
-                
-                # Commit periodically to avoid large transactions
+
                 if len(processed_files) % 50 == 0:
                     await db.commit()
-            
-            # Update repository statistics
+
             repo.total_files = len(processed_files)
             repo.total_size_bytes = total_size
-            
-            # Generate repository overview
+
             file_summaries = [
                 {
                     "path": f.path,
                     "summary": f"{f.language or 'unknown'} file, {f.line_count or 0} lines",
                 }
-                for f in processed_files[:100]  # Limit for overview
+                for f in processed_files[:100]
             ]
             
             overview_data = await self.ai_service.generate_repository_overview(
@@ -264,7 +244,6 @@ class RepoIngestionFromCloneService:
                 file_summaries=file_summaries,
             )
             
-            # Store overview as initial memory
             from app.services.memory_service import MemoryService
             memory_service = MemoryService()
             await memory_service.create_memory(
@@ -279,7 +258,6 @@ class RepoIngestionFromCloneService:
                 },
             )
             
-            # Mark as completed
             repo.status = RepositoryStatus.COMPLETED
             repo.ingestion_completed_at = datetime.utcnow()
             await db.commit()
@@ -287,7 +265,6 @@ class RepoIngestionFromCloneService:
             return repo
             
         except Exception as e:
-            # Mark as failed
             repo.status = RepositoryStatus.FAILED
             repo.ingestion_error = str(e)
             await db.commit()

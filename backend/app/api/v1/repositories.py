@@ -1,33 +1,34 @@
 """
-Repository management API endpoints.
+This module exposes repository lifecycle endpoints for connecting, listing, and
+summarizing repositories. It validates repository state, coordinates metadata
+retrieval, and dispatches ingestion jobs to the worker layer.
 """
 from typing import List
-from fastapi import APIRouter, HTTPException, BackgroundTasks
-from sqlalchemy.ext.asyncio import AsyncSession
+from fastapi import APIRouter, HTTPException, Request
 from sqlalchemy import select
-
 from app.core.dependencies import DatabaseDep
+from app.core.rate_limit import rate_limit
 from app.models.repository import Repository, RepositoryStatus
 from app.schemas.repository import RepositoryCreate, RepositoryResponse, RepositoryOverviewResponse
 from app.services.github_service import GitHubService
-from app.services.repo_ingestion import RepoIngestionService
 from app.services.ai_service import AIService
 from app.services.memory_service import MemoryService
+from app.workers.tasks.repository_tasks import ingest_repository_task
 
 router = APIRouter()
 
 
 @router.post("/repositories", response_model=RepositoryResponse, status_code=201)
+@rate_limit(limit=30, window=60)
 async def create_repository(
+    request: Request,
     repo_data: RepositoryCreate,
-    background_tasks: BackgroundTasks,
     db: DatabaseDep,
 ):
     """
     Connect a GitHub repository to Polonium.
     Starts ingestion in the background.
     """
-    # Check if repository already exists
     full_name = f"{repo_data.owner}/{repo_data.name}"
     stmt = select(Repository).where(Repository.github_full_name == full_name)
     result = await db.execute(stmt)
@@ -39,7 +40,6 @@ async def create_repository(
             detail=f"Repository {full_name} is already connected",
         )
     
-    # Fetch repository metadata from GitHub
     github_service = GitHubService()
     try:
         repo_info = await github_service.get_repository(repo_data.owner, repo_data.name)
@@ -49,7 +49,6 @@ async def create_repository(
             detail=f"Repository not found or inaccessible: {str(e)}",
         )
     
-    # Create repository record
     repository = Repository(
         github_owner=repo_data.owner,
         github_name=repo_data.name,
@@ -63,13 +62,7 @@ async def create_repository(
     await db.commit()
     await db.refresh(repository)
     
-    # Start ingestion in background
-    ingestion_service = RepoIngestionService()
-    background_tasks.add_task(
-        ingestion_service.ingest_repository,
-        db=db,
-        repository_id=repository.id,
-    )
+    ingest_repository_task.delay(repository.id)
     
     return repository
 
@@ -110,7 +103,6 @@ async def get_repository_overview(
     db: DatabaseDep,
 ):
     """Get AI-generated repository overview."""
-    # Fetch repository
     stmt = select(Repository).where(Repository.id == repository_id)
     result = await db.execute(stmt)
     repository = result.scalar_one_or_none()
@@ -124,7 +116,6 @@ async def get_repository_overview(
             detail=f"Repository ingestion not completed. Status: {repository.status}",
         )
     
-    # Fetch existing memories
     memory_service = MemoryService()
     from app.models.memory import RepositoryMemory
     from sqlalchemy import select
@@ -133,7 +124,6 @@ async def get_repository_overview(
     memories = result.scalars().all()
     memory_texts = [m.content for m in memories]
     
-    # Fetch file summaries
     from app.models.file import File
     stmt = select(File).where(File.repository_id == repository_id).limit(100)
     result = await db.execute(stmt)
@@ -147,7 +137,6 @@ async def get_repository_overview(
         for f in files
     ]
     
-    # Generate overview
     ai_service = AIService()
     overview_data = await ai_service.generate_repository_overview(
         repository_name=repository.github_full_name,
