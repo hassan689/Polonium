@@ -1,4 +1,22 @@
 <img width="1893" height="910" alt="Screenshot (198)" src="https://github.com/user-attachments/assets/5c70173e-141b-4387-be47-9cef69b3ecd6" />
+# phases for this project 
+🥇 Phase 1 (Strong Product Identity)
+Repo architecture visualization
+Contribution assistant
+Beginner issue detection
+Smart repo summary (not generic)
+🥈 Phase 2 (Collaboration)
+Inline comments on code
+Threaded discussions
+Shared workspace notes
+AI-assisted discussions
+🥉 Phase 3 (Light Action Layer)
+
+Not full agents, just helpful actions:
+Generate code suggestions
+Create PR draft
+Suggest fixes (not auto-apply)
+
 
 # Polonium
 
