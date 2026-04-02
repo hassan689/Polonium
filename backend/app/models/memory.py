@@ -24,7 +24,7 @@ class RepositoryMemory(Base):
     # Embedding reference for semantic search
     qdrant_point_id = Column(String(255), nullable=True, index=True)
     
-    # Metadata
+
     metadata = Column(JSON, default=dict)  # Additional context (files, timestamps, etc.)
     
     # Timestamps
