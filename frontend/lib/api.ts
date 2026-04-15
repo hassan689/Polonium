@@ -86,6 +86,23 @@ export interface ChatMessageCreate {
   content: string
 }
 
+// Memory types
+export interface RepositoryMemory {
+  id: number
+  repository_id: number
+  title: string
+  content: string
+  memory_type: string | null
+  importance_score: number | null
+  created_at: string
+}
+
+export interface RepositoryMemoryCreate {
+  title: string
+  content: string
+  memory_type?: string
+}
+
 // API functions
 export const repositoryApi = {
   list: async (): Promise<Repository[]> => {
@@ -135,6 +152,21 @@ export const chatApi = {
 
   send: async (repositoryId: number, message: ChatMessageCreate): Promise<ChatMessage> => {
     const response = await api.post(`/repositories/${repositoryId}/chat`, message)
+    return response.data
+  },
+}
+
+export const memoryApi = {
+  list: async (repositoryId: number): Promise<RepositoryMemory[]> => {
+    const response = await api.get(`/repositories/${repositoryId}/memory`)
+    return response.data
+  },
+
+  create: async (
+    repositoryId: number,
+    memory: RepositoryMemoryCreate
+  ): Promise<RepositoryMemory> => {
+    const response = await api.post(`/repositories/${repositoryId}/memory`, memory)
     return response.data
   },
 }

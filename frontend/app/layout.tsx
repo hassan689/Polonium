@@ -6,7 +6,7 @@ import { ThemeProvider } from "@/components/theme/ThemeProvider"
 const inter = Inter({ subsets: ["latin"] })
 
 export const metadata: Metadata = {
-  title: "Polonium - AI-Powered Repository Workspace",
+  title: "Polonium",
   description: "Understand, discuss, and contribute to GitHub repositories with AI",
   icons: {
     icon: "/icon.svg",

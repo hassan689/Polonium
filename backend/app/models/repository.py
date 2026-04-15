@@ -1,5 +1,7 @@
 """
-Repository model for GitHub repositories.
+This module defines the repository persistence model and ingestion lifecycle
+state used to track indexing progress, repository statistics, and relationships
+to files, chat history, and long-term repository memory.
 """
 from datetime import datetime
 from sqlalchemy import Column, Integer, String, DateTime, Enum, Text, JSON
@@ -29,24 +31,19 @@ class Repository(Base):
     github_url = Column(String(1024), nullable=False)
     github_description = Column(Text, nullable=True)
     
-    # Ingestion metadata
     status = Column(Enum(RepositoryStatus), default=RepositoryStatus.PENDING, nullable=False)
     ingestion_started_at = Column(DateTime, nullable=True)
     ingestion_completed_at = Column(DateTime, nullable=True)
     ingestion_error = Column(Text, nullable=True)
     
-    # Statistics
     total_files = Column(Integer, default=0)
     total_size_bytes = Column(Integer, default=0)
     
-    # Configuration
-    config = Column(JSON, default=dict)  # Store repo-specific settings
-    
-    # Timestamps
+    config = Column(JSON, default=dict)
+
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
     
-    # Relationships
     files = relationship("File", back_populates="repository", cascade="all, delete-orphan")
     chat_messages = relationship("ChatMessage", back_populates="repository", cascade="all, delete-orphan")
     memories = relationship("RepositoryMemory", back_populates="repository", cascade="all, delete-orphan")

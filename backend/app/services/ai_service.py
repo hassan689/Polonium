@@ -2,20 +2,84 @@
 AI service for LLM interactions.
 """
 from typing import List, Optional, Dict, Any
-from openai import AsyncOpenAI
 from datetime import datetime
+import json
+import hashlib
+import logging
 
+from app.core.cache import cache_get_json, cache_set_json
 from app.core.config import settings
+from app.core.exceptions import AIError, InferenceTimeoutError
+from app.services.llm.factory import LLMFactory
 from app.services.embedding_service import EmbeddingService
+
+logger = logging.getLogger("polonium.ai")
 
 
 class AIService:
     """Service for AI/LLM interactions."""
     
     def __init__(self):
-        """Initialize AI service with OpenAI client."""
-        self.client = AsyncOpenAI(api_key=settings.OPENAI_API_KEY)
+        """Initialize AI service with pluggable LLM provider."""
         self.embedding_service = EmbeddingService()
+        self.provider = LLMFactory.create()
+
+    async def _chat_completion(
+        self,
+        messages: List[Dict[str, str]],
+        temperature: float = 0.7,
+    ) -> str:
+        cache_key = self._cache_key(messages=messages, temperature=temperature)
+        try:
+            response = self.provider.chat(messages=messages, temperature=temperature)
+            cache_set_json(cache_key, {"content": response}, ttl_seconds=settings.AI_CACHE_TTL_SECONDS)
+            return response
+        except Exception as primary_exc:
+            cached = cache_get_json(cache_key)
+            if cached and cached.get("content"):
+                logger.warning("Primary AI unavailable, returning cached response")
+                return cached["content"]
+
+            fallback_model = settings.FALLBACK_LLM_MODEL
+            if fallback_model and hasattr(self.provider, "model"):
+                try:
+                    original = self.provider.model
+                    self.provider.model = fallback_model
+                    fallback_response = self.provider.chat(messages=messages, temperature=temperature)
+                    self.provider.model = original
+                    return fallback_response
+                except Exception:
+                    if hasattr(self.provider, "model"):
+                        self.provider.model = original
+
+            raise InferenceTimeoutError(
+                "AI service is temporarily unavailable. Please try again shortly."
+            ) from primary_exc
+
+    @staticmethod
+    def _cache_key(messages: List[Dict[str, str]], temperature: float) -> str:
+        payload = json.dumps({"messages": messages, "temperature": temperature}, sort_keys=True)
+        digest = hashlib.sha256(payload.encode("utf-8")).hexdigest()
+        return f"ai:chat:{digest}"
+
+    async def _chat_completion_json(
+        self,
+        messages: List[Dict[str, str]],
+        temperature: float = 0.3,
+    ) -> Dict[str, Any]:
+        try:
+            content = await self._chat_completion(messages=messages, temperature=temperature)
+            return json.loads(content)
+        except json.JSONDecodeError as exc:
+            raise AIError("AI response parsing failed for expected JSON output.") from exc
+
+    async def generate_json_response(
+        self,
+        messages: List[Dict[str, str]],
+        temperature: float = 0.3,
+    ) -> Dict[str, Any]:
+        """Public helper for structured JSON responses from local model."""
+        return await self._chat_completion_json(messages=messages, temperature=temperature)
     
     async def generate_repository_overview(
         self,
@@ -34,7 +98,6 @@ class AIService:
         Returns:
             Dictionary with overview, architecture, tech_stack, and key_files
         """
-        # Build context from file summaries
         file_context = "\n".join([
             f"- {f['path']}: {f.get('summary', 'No description')}"
             for f in file_summaries[:50]  # Limit to top 50 files
@@ -58,18 +121,16 @@ Provide a comprehensive overview including:
 
 Format your response as JSON with keys: overview, architecture, tech_stack (array), key_files (array of file paths)."""
 
-        response = await self.client.chat.completions.create(
-            model=settings.OPENAI_MODEL,
+        result = await self._chat_completion_json(
             messages=[
-                {"role": "system", "content": "You are an expert software architect analyzing codebases. Provide clear, structured insights."},
+                {
+                    "role": "system",
+                    "content": "You are an expert software architect analyzing codebases. Return valid JSON only.",
+                },
                 {"role": "user", "content": prompt},
             ],
-            response_format={"type": "json_object"},
             temperature=0.3,
         )
-        
-        import json
-        result = json.loads(response.choices[0].message.content)
         
         return {
             "overview": result.get("overview", ""),
@@ -123,18 +184,16 @@ Provide:
 
 Format as JSON with keys: explanation, purpose, key_functions (array), dependencies (array of file paths or module names)."""
 
-        response = await self.client.chat.completions.create(
-            model=settings.OPENAI_MODEL,
+        result = await self._chat_completion_json(
             messages=[
-                {"role": "system", "content": "You are an expert code reviewer explaining code files clearly and concisely."},
+                {
+                    "role": "system",
+                    "content": "You are an expert code reviewer explaining code files clearly and concisely. Return valid JSON only.",
+                },
                 {"role": "user", "content": prompt},
             ],
-            response_format={"type": "json_object"},
             temperature=0.3,
         )
-        
-        import json
-        result = json.loads(response.choices[0].message.content)
         
         return {
             "file_path": file_path,
@@ -204,11 +263,5 @@ Provide helpful, accurate, and context-aware responses."""
         # Add current user message
         messages.append({"role": "user", "content": user_message})
         
-        response = await self.client.chat.completions.create(
-            model=settings.OPENAI_MODEL,
-            messages=messages,
-            temperature=0.7,
-        )
-        
-        return response.choices[0].message.content
+        return await self._chat_completion(messages=messages, temperature=0.7)
 

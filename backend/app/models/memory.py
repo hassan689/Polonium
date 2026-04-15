@@ -1,5 +1,6 @@
 """
-Repository memory model for persistent AI context.
+This module defines persistent repository memory records used to store reusable
+AI context, including semantic-search references and structured metadata.
 """
 from datetime import datetime
 from sqlalchemy import Column, Integer, String, Text, DateTime, ForeignKey, JSON
@@ -16,22 +17,14 @@ class RepositoryMemory(Base):
     id = Column(Integer, primary_key=True, index=True)
     repository_id = Column(Integer, ForeignKey("repositories.id", ondelete="CASCADE"), nullable=False, index=True)
     
-    # Memory content
-    title = Column(String(512), nullable=False)  # Brief title/description
-    content = Column(Text, nullable=False)  # Memory content
-    category = Column(String(100), nullable=True)  # e.g., "architecture", "pattern", "decision"
-    
-    # Embedding reference for semantic search
+    title = Column(String(512), nullable=False)
+    content = Column(Text, nullable=False)
+    category = Column(String(100), nullable=True)
     qdrant_point_id = Column(String(255), nullable=True, index=True)
-    
-
-    metadata = Column(JSON, default=dict)  # Additional context (files, timestamps, etc.)
-    
-    # Timestamps
+    metadata = Column(JSON, default=dict)
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
-    
-    # Relationships
+
     repository = relationship("Repository", back_populates="memories")
     
     def __repr__(self) -> str:

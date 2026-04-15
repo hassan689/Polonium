@@ -153,19 +153,16 @@ This could be:
 If there's a valuable insight, format as JSON with keys: title, content, category.
 If there's no valuable insight, return {{"extract": false}}."""
 
-        from app.core.config import settings
-        response = await self.ai_service.client.chat.completions.create(
-            model=settings.OPENAI_MODEL,
+        result = await self.ai_service.generate_json_response(
             messages=[
-                {"role": "system", "content": "You extract valuable, reusable insights from conversations."},
+                {
+                    "role": "system",
+                    "content": "You extract valuable, reusable insights from conversations. Return valid JSON only.",
+                },
                 {"role": "user", "content": prompt},
             ],
-            response_format={"type": "json_object"},
             temperature=0.3,
         )
-        
-        import json
-        result = json.loads(response.choices[0].message.content)
         
         if not result.get("extract", True):
             return None

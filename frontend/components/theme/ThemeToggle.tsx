@@ -8,8 +8,6 @@ import { Button } from "@/components/ui/button"
 export function ThemeToggle() {
   const { theme, setTheme, resolvedTheme } = useTheme()
   const [mounted, setMounted] = React.useState(false)
-
-  // useEffect only runs on the client, so now we can safely show the UI
   React.useEffect(() => {
     setMounted(true)
   }, [])

@@ -1,9 +1,10 @@
 """
-File-related API endpoints.
+This module provides file exploration and file explanation endpoints for a
+connected repository. It validates repository state, fetches file records, and
+invokes AI-assisted explanation with repository memory context.
 """
 from typing import List
 from fastapi import APIRouter, HTTPException
-from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 
 from app.core.dependencies import DatabaseDep
@@ -25,7 +26,6 @@ async def list_files(
     path_prefix: str = None,
 ):
     """List files in a repository."""
-    # Verify repository exists
     stmt = select(Repository).where(Repository.id == repository_id)
     result = await db.execute(stmt)
     repository = result.scalar_one_or_none()
@@ -33,7 +33,6 @@ async def list_files(
     if not repository:
         raise HTTPException(status_code=404, detail="Repository not found")
     
-    # Build query
     stmt = select(File).where(File.repository_id == repository_id)
     
     if path_prefix:
@@ -54,7 +53,6 @@ async def get_file(
     db: DatabaseDep,
 ):
     """Get file details."""
-    # Verify repository exists
     stmt = select(Repository).where(Repository.id == repository_id)
     result = await db.execute(stmt)
     repository = result.scalar_one_or_none()
@@ -62,7 +60,6 @@ async def get_file(
     if not repository:
         raise HTTPException(status_code=404, detail="Repository not found")
     
-    # Fetch file
     stmt = select(File).where(
         File.repository_id == repository_id,
         File.path == file_path,
@@ -83,7 +80,6 @@ async def explain_file(
     db: DatabaseDep,
 ):
     """Get AI-generated explanation for a file."""
-    # Verify repository exists
     stmt = select(Repository).where(Repository.id == repository_id)
     result = await db.execute(stmt)
     repository = result.scalar_one_or_none()
@@ -97,7 +93,6 @@ async def explain_file(
             detail=f"Repository ingestion not completed. Status: {repository.status}",
         )
     
-    # Fetch file
     stmt = select(File).where(
         File.repository_id == repository_id,
         File.path == file_path,
@@ -111,7 +106,6 @@ async def explain_file(
     if not file_obj.content:
         raise HTTPException(status_code=400, detail="File content not available")
     
-    # Get repository context
     memory_service = MemoryService()
     memories = await memory_service.get_relevant_memories(
         db=db,
@@ -122,7 +116,6 @@ async def explain_file(
     memory_texts = [m.content for m in memories]
     repo_context = "\n".join(memory_texts) if memory_texts else None
     
-    # Generate explanation
     ai_service = AIService()
     explanation = await ai_service.explain_file(
         file_path=file_path,

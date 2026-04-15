@@ -4,17 +4,14 @@ Embedding service for generating and managing vector embeddings.
 from typing import List, Optional
 from qdrant_client import QdrantClient
 from qdrant_client.models import Distance, VectorParams, PointStruct, Filter, FieldCondition, MatchValue
-from openai import AsyncOpenAI
-
 from app.core.config import settings
-
-
+from app.services.embeddings.factory import EmbeddingFactory
 class EmbeddingService:
     """Service for generating embeddings and managing Qdrant vector store."""
     
     def __init__(self):
-        """Initialize embedding service with OpenAI and Qdrant clients."""
-        self.openai_client = AsyncOpenAI(api_key=settings.OPENAI_API_KEY)
+        """Initialize embedding service with local endpoint and Qdrant clients."""
+        self.provider = EmbeddingFactory.create()
         self.qdrant_client = QdrantClient(url=settings.QDRANT_URL)
         self._ensure_collection()
     
@@ -28,7 +25,7 @@ class EmbeddingService:
                 self.qdrant_client.create_collection(
                     collection_name=settings.QDRANT_COLLECTION_NAME,
                     vectors_config=VectorParams(
-                        size=1536,  # text-embedding-3-small dimension
+                        size=self.provider.get_dimension(),
                         distance=Distance.COSINE,
                     ),
                 )
@@ -38,7 +35,7 @@ class EmbeddingService:
     
     async def generate_embedding(self, text: str) -> List[float]:
         """
-        Generate embedding for text using OpenAI.
+        Generate embedding for text using local embedding model.
         
         Args:
             text: Text to embed
@@ -46,11 +43,7 @@ class EmbeddingService:
         Returns:
             Embedding vector
         """
-        response = await self.openai_client.embeddings.create(
-            model=settings.OPENAI_EMBEDDING_MODEL,
-            input=text,
-        )
-        return response.data[0].embedding
+        return self.provider.embed(text)
     
     async def store_embedding(
         self,

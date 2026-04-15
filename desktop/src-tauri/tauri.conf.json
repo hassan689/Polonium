@@ -1,0 +1,25 @@
+{
+  "$schema": "https://schema.tauri.app/config/2",
+  "productName": "Polonium",
+  "version": "0.1.0",
+  "identifier": "com.polonium.app",
+  "build": {
+    "beforeDevCommand": "cd ../frontend && npm run dev",
+    "devUrl": "http://localhost:3000",
+    "frontendDist": "../frontend/.next"
+  },
+  "app": {
+    "windows": [
+      {
+        "title": "Polonium",
+        "width": 1200,
+        "height": 800
+      }
+    ]
+  },
+  "bundle": {
+    "active": true,
+    "targets": "all"
+  }
+}
+

@@ -1,5 +1,6 @@
 """
-Chat message model for repository discussions.
+This module defines chat message persistence for repository discussions,
+including role attribution and optional AI context metadata.
 """
 from datetime import datetime
 from sqlalchemy import Column, Integer, String, Text, DateTime, ForeignKey, Enum, JSON
@@ -25,17 +26,11 @@ class ChatMessage(Base):
     repository_id = Column(Integer, ForeignKey("repositories.id", ondelete="CASCADE"), nullable=False, index=True)
     user_id = Column(Integer, ForeignKey("users.id", ondelete="SET NULL"), nullable=True, index=True)
     
-    # Message content
     role = Column(Enum(MessageRole), nullable=False)
     content = Column(Text, nullable=False)
-    
-    # AI context (files referenced, memory used, etc.)
-    context = Column(JSON, default=dict)  # Store metadata about AI response
-    
-    # Timestamps
+    context = Column(JSON, default=dict)
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False, index=True)
-    
-    # Relationships
+
     repository = relationship("Repository", back_populates="chat_messages")
     user = relationship("User", back_populates="chat_messages")
     
