@@ -9,8 +9,6 @@ from typing import Any, Dict, Optional
 import requests
 from requests.adapters import HTTPAdapter
 from urllib3.util.retry import Retry
-
-
 @dataclass
 class APIError(Exception):
     status_code: int
@@ -22,8 +20,6 @@ class APIError(Exception):
         if self.details:
             return f"{base} | details={self.details}"
         return base
-
-
 class PoloniumClient:
     """Reusable HTTP client with retries and auth support."""
 
@@ -73,22 +69,16 @@ class PoloniumClient:
             return response.json()
         except ValueError:
             return {"raw": response.text}
-
     def connect_repo(self, owner: str, name: str) -> Dict[str, Any]:
         return self._request("POST", "repositories", json={"owner": owner, "name": name})
-
     def list_repos(self) -> Dict[str, Any]:
         return self._request("GET", "repositories")
-
     def repo_overview(self, repo_id: int) -> Dict[str, Any]:
         return self._request("GET", f"repositories/{repo_id}/overview")
-
     def explain_file(self, repo_id: int, file_path: str) -> Dict[str, Any]:
         return self._request("GET", f"repositories/{repo_id}/files/{file_path}/explain")
-
     def send_chat(self, repo_id: int, content: str) -> Dict[str, Any]:
         return self._request("POST", f"repositories/{repo_id}/chat", json={"content": content})
-
     def chat_history(self, repo_id: int) -> Dict[str, Any]:
         return self._request("GET", f"repositories/{repo_id}/chat")
 
