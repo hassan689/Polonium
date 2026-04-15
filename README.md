@@ -76,7 +76,6 @@ flowchart TD
     D -.-> Note1
     A -.-> Note2
 ```
-<img width="1205" height="463" alt="Screenshot (295)" src="https://github.com/user-attachments/assets/18488d24-dad3-44ae-a504-e0ce6dcdd2bb" />
 
 Polonium follows a clean, modular architecture:
 
