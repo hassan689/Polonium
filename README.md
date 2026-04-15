@@ -13,7 +13,77 @@ An open-source, AI-powered collaborative workspace for developers to understand,
 - **Collaborative Chat**: Real-time shared chat per repository with persistent history
 - **Persistent Memory**: Repository-level AI memory that learns and remembers insights
 
+
 ## Architecture
+### System Architecture
+
+```mermaid
+flowchart TD
+    subgraph Clients["Clients"]
+        A[Frontend Web App<br/>Next.js / TypeScript]
+        B[CLI Client<br/>Python requests]
+        C[Desktop Client<br/>Tauri / Rust wrapper]
+    end
+
+    subgraph Backend["Backend API (FastAPI)"]
+        D[API Endpoints:<br/>/repositories<br/>/chat<br/>/health/metrics]
+        E[Async SQLAlchemy]
+        F[Pluggable AI Provider Factory<br/>LLM + Embedding]
+    end
+
+    subgraph Worker["Background Worker"]
+        G[Celery Worker<br/>Ingestion tasks]
+    end
+
+    subgraph Storage["Storage & State"]
+        H[(PostgreSQL<br/>System of Record)]
+        I[(Qdrant<br/>Vector Store)]
+        J[(Redis<br/>Cache + Celery broker/result)]
+    end
+
+    subgraph External["External Services"]
+        K[GitHub API]
+        L[LLM / Embedding Provider<br/>Pluggable]
+    end
+
+    %% Client → API
+    A -->|REST / WS| D
+    B -->|REST| D
+    C -->|REST| D
+
+    %% API → Storage (direct reads)
+    D -->|read/write metadata| H
+    D -->|read cache| J
+    D -->|vector search| I
+
+    %% API → Worker (ingestion trigger)
+    D -->|queue repositories.ingest| G
+
+    %% Worker → External/Storage
+    G -->|fetch repo tree/files| K
+    G -->|store files/memories| H
+    G -->|generate embeddings| L
+    G -->|upsert vectors| I
+    G -->|cache results| J
+
+    %% API → AI Provider (chat flow)
+    D -->|embed query + LLM call| L
+
+    %% Callouts
+    style D fill:#e1f5fe
+    style G fill:#fff3e0
+    style H fill:#e8f5e9
+    style I fill:#f3e5f5
+    style J fill:#ffebee
+    style L fill:#fce4ec
+
+    %% Notes as annotations
+    Note1[Async API + Prometheus metrics endpoint]
+    Note2[WebSocket chat: placeholder echo]
+    Note3[ARCHITECTURE.md referenced but missing]
+    D -.-> Note1
+    A -.-> Note2
+    style Note3 fill:#fff9c4
 
 Polonium follows a clean, modular architecture:
 
