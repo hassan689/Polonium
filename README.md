@@ -16,6 +16,7 @@ An open-source, AI-powered collaborative workspace for developers to understand,
 
 ## Architecture
 ### System Architecture
+### System Architecture
 
 ```mermaid
 flowchart TD
@@ -69,22 +70,12 @@ flowchart TD
     %% API → AI Provider (chat flow)
     D -->|embed query + LLM call| L
 
-    %% Callouts
-    style D fill:#e1f5fe
-    style G fill:#fff3e0
-    style H fill:#e8f5e9
-    style I fill:#f3e5f5
-    style J fill:#ffebee
-    style L fill:#fce4ec
-
     %% Notes as annotations
     Note1[Async API + Prometheus metrics endpoint]
     Note2[WebSocket chat: placeholder echo]
-    Note3[ARCHITECTURE.md referenced but missing]
     D -.-> Note1
     A -.-> Note2
-    style Note3 fill:#fff9c4
-
+```
 Polonium follows a clean, modular architecture:
 
 - **Frontend**: Next.js with TypeScript, Tailwind CSS, shadcn/ui, Monaco Editor
