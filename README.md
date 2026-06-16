@@ -13,9 +13,6 @@ An open-source, AI-powered collaborative workspace for developers to understand,
 - **Collaborative Chat**: Real-time shared chat per repository with persistent history
 - **Persistent Memory**: Repository-level AI memory that learns and remembers insights
 
-
-## Architecture
-### System Architecture
 ### System Architecture
 
 ```mermaid
