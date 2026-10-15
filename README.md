@@ -243,14 +243,4 @@ Contributions are welcome! Please:
 
 [To be determined - open source license]
 
-## Status
 
-✅ **MVP Complete** - Both backend and frontend are scaffolded and ready for development. Core features implemented:
-- Repository connection and ingestion
-- AI-powered overviews and file explanations
-- Collaborative chat interface
-- File browser with search
-
----
-
-Your AI for making open source contribution and work more better and organized. so this is the preject and now i want to use the ai as a service what would be the opetion and also Iwant to lauch this product 
