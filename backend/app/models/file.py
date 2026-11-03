@@ -1,17 +1,10 @@
-"""
-This module defines file persistence for repository content, including metadata,
-content hashes, and vector-store references used for semantic retrieval.
-"""
 from datetime import datetime
 from sqlalchemy import Column, Integer, String, Text, DateTime, ForeignKey, BigInteger
 from sqlalchemy.orm import relationship
-
 from app.core.database import Base
-
-
 class File(Base):
-    """Repository file model with embedding reference."""
-    
+    #embedding reference
+
     __tablename__ = "files"
     
     id = Column(Integer, primary_key=True, index=True)
