@@ -12,6 +12,7 @@ An open-source, AI-powered collaborative workspace for developers to understand,
 - **File Explanations**: Context-aware explanations for individual files
 - **Collaborative Chat**: Real-time shared chat per repository with persistent history
 - **Persistent Memory**: Repository-level AI memory that learns and remembers insights
+- **Version-aware hybrid code RAG
 
 ### System Architecture
 
