@@ -84,6 +84,9 @@ Polonium follows a clean, modular architecture:
 
 See [ARCHITECTURE.md](./ARCHITECTURE.md) for detailed architecture documentation.
 
+## Hybrid Rag implementation in repo analysis 
+<img width="2310" height="2522" alt="mermaid-diagram" src="https://github.com/user-attachments/assets/11f05626-25dc-4edf-b8fc-231406f8b4c4" />
+
 ## Quick Start
 
 ### Prerequisites
